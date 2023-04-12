@@ -256,7 +256,8 @@ sub get_disks {
   foreach (split(/\n/s, $lsblk)) {
       s/\s+$//;			# No trailing space
       my ($dev,$model) = split(/\s+/, $_, 2);
-      next if $dev eq 'NAME' or $model ne 'LOGICAL VOLUME';
+      next if $dev eq 'NAME' or
+        $model ne 'LOGICAL VOLUME';
       $logical->{$dev} = 1;
   }
 
@@ -273,7 +274,9 @@ sub get_disks {
 
     $basedev = $dev if $dev =~ m~^/~;
 
-    next if $logical->{$basedev};
+    next if $logical->{$basedev} or
+      substr($basedev,0,9) eq '/dev/nvme';
+
     next if not defined $mount;
 
     $ssd{$basedev} = 1 if $rot == 0;
@@ -298,7 +301,7 @@ sub get_param {
 sub months_from_percentage {
   my ($hours, $wear, $disk, $rootdisk) = @_;
 
-  my $state;
+  my $state = $OK;
 
   my $months_left;
   if ($wear > 90) {
@@ -319,9 +322,9 @@ sub months_from_percentage {
       $state = $CRITICAL if $rootdisk->{$disk}; # Higher citicality for / disks
     }
   }
-  return ( $state, [ wear => $wear,
+  return ( $state, { wear => $wear,
            monthsleft => $months_left,
-           isroot => $rootdisk->{$disk} // 0 ] );
+           isroot => $rootdisk->{$disk} // 0 } );
 }
 
 
@@ -371,9 +374,11 @@ sub get_lifetime {
       exit $UNKNOWN;
     }
 
-    $findings{$disk} = $diskstate;
+    $findings{$disk} = $finding;
     $state = $diskstate if $diskstate > $state;
-    my $months_left = $findings{$disk}->{months_left};
+    my $months_left = $finding->{monthsleft};
+
+    next if $months_left eq 'many';
 
     if ($months_left < $worst_mo) {
       $worst_mo = $months_left;
