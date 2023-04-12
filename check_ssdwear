@@ -343,7 +343,7 @@ sub get_lifetime {
     my $smart = `sudo smartctl -A $disk`;
     $smart =~ s/^\s+//gm;        # Remove leading space on all lines
     $smart =~ s/^.*RAW_VALUE//s; # Remove heading section
-    $smart =~ s/^.*===$//s;    # Remove up to === START OF DATA on nvme
+    $smart =~ s/^.*===$//s;      # Remove up to === START OF DATA on nvme
     $smart =~ s/(\d) (\d)/$1$2/; # Remove single inter-digit spaces e.g. in "1 250"
 
     my $hours  = get_param($smart, 'Power_On_Hours', -1);
